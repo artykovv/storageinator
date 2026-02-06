@@ -1,157 +1,102 @@
-# Storageinator
+# Storageinator ☁️
 
-Backend-сервис для хранения файлов на S3-совместимом хранилище с управлением пользователями, иерархией директорий и гибкой системой прав доступа.
+Backend-сервис для хранения файлов с S3, управлением пользователями и правами доступа. По сути — это твой личный Google Drive/Dropbox, но self-hosted и с гибкими правами.
 
-## 🚀 Features
+[![Backend](https://img.shields.io/badge/Python-3.12-blue)](https://python.org)
+[![Framework](https://img.shields.io/badge/FastAPI-Modern-green)](https://fastapi.tiangolo.com)
+[![Frontend](https://img.shields.io/badge/Vue-3-success)](https://vuejs.org)
 
-- **Authentication**: JWT-based auth with access/refresh tokens
-- **Directory Management**: Hierarchical directory structure
-- **File Management**: Upload/download via presigned URLs (no files stored on backend)
-- **Access Control**: Read/write/delete permissions with inheritance
-- **Vue SPA**: Modern frontend with dark theme
+## 🚀 Основные возможности
 
-## 🛠 Tech Stack
+### Управление файлами и папками
+- 📁 **Иерархическая структура**: Создавайте вложенные папки любой глубины.
+- 📤 **Загрузка файлов**: Прямая загрузка в S3 через presigned URLs (бэкенд не гоняет трафик через себя — это быстро).
+- 👁️ **Предпросмотр**: Встроенный просмотр картинок, PDF и потоковое видео (MP4, WebM) прямо в браузере.
+- 🔗 **Публичные ссылки**: Делитесь файлами с внешним миром одной ссылкой.
+
+### Права доступа и роли
+Мы реализовали полноценную RBAC (Role-Based Access Control):
+
+- **Super Admin**: Царь и бог. Видит всё, удаляет что угодно, управляет админами. Создается автоматически при старте.
+- **Admin**: Управляет обычными пользователями, но не лезет к другим админам.
+- **User**: Обычный смертный. Работает со своими файлами и тем, что ему расшарили.
+- **Pending**: Новички после регистрации. Ничего не могут, пока админ не даст добро.
+
+### Безопасность
+- 🛡️ **JWT Auth**: Access и Refresh токены для безопасных сессий.
+- 🔒 **Публичные папки**: Можно сделать папку публичной, но она будет **Read-Only** для остальных. Загружать туда может только владелец.
+- ⛔ **Block Pending**: Новые юзеры не могут войти в систему до аппрува.
+
+---
+
+## 🛠 Технический стек
+
+Мы использовали проверенные и современные инструменты (уровень Middle+):
 
 ### Backend
-- Python 3.12
-- FastAPI
-- MongoDB (Motor async driver)
-- AWS S3 (MinIO for local development)
-- JWT authentication
+- **FastAPI**: Асинхронный, быстрый, с автоматической документацией (Swagger).
+- **MongoDB (Motor)**: Документо-ориентированная база, отлично подходит для хранения метаданных и иерархий.
+- **AWS S3 / MinIO**: Объектное хранилище. В проде — AWS/Cloudflare R2, локально — MinIO.
 
 ### Frontend
-- Vue 3 + Vite
-- Pinia (state management)
-- Vue Router
-- Axios
+- **Vue 3 (Composition API)**: Реактивный и модульный UI.
+- **Pinia**: Для управления состоянием (вместо старого Vuex).
+- **Vite**: Сборщик молния.
 
-## 📦 Quick Start
+---
 
-### Prerequisites
-- Docker & Docker Compose
+## 📦 Быстрый старт (Docker)
 
-### Run with Docker Compose
+Запуск одной командой. Никакой магии, всё в контейнерах.
+
+### 1. Подготовка конфига
+Создайте файл `.env`. Мы подготовили пример, просто скопируйте его:
 
 ```bash
-# 1. Clone the repository
-git clone <repo-url>
-cd storageinator
-
-# 2. Create .env file from example
 cp .env.example .env
+```
+*(В файле `.env` уже прописаны настройки для локального запуска. Менять ничего не нужно, если вы просто тестируете).*
 
-# 3. (Optional) Edit .env to change settings
-#    IMPORTANT: Change JWT_SECRET_KEY in production!
+### 2. Запуск
+Поднимаем базу, S3, бэкенд и фронтенд:
 
-# 4. Start all services
+```bash
 docker compose up -d
-
-# 5. Open in browser
-#    Frontend: http://localhost:3000
-#    API Docs: http://localhost:8000/docs
-#    MinIO Console: http://localhost:9001 (minioadmin/minioadmin)
 ```
 
-### Stop Services
+### 3. Готово!
+Открываем браузер:
+- 🖥️ **Frontend**: [http://localhost:3000](http://localhost:3000) (Вход: `admin@example.com` / `admin123`)
+- 📄 **API Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
+- 🗄️ **MinIO Console**: [http://localhost:9001](http://localhost:9001) (Логин/pass: `minioadmin` / `minioadmin`)
 
-```bash
-docker compose down
+---
 
-# To also remove volumes (data):
-docker compose down -v
-```
+## ⚙️ Конфигурация (.env)
 
-## 🔧 Configuration
+Основные переменные, которые стоит знать:
 
-Edit `.env` file to configure:
+| Переменная | Значение по умолчанию | Зачем нужна |
+|------------|-----------------------|-------------|
+| `JWT_SECRET_KEY` | `change-me...` | **ОБЯЗАТЕЛЬНО** поменяйте на проде! Это ключ подписи токенов. |
+| `SUPER_ADMIN_EMAIL` | `admin@example.com` | Email главного админа (создается при старте). |
+| `SUPER_ADMIN_PASSWORD` | `admin123` | Пароль главного админа. |
+| `MINIO_ROOT_USER` | `minioadmin` | Доступы к S3 (MinIO). |
+| `MAX_FILE_SIZE_MB` | `100` | Лимит на размер файла. |
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `JWT_SECRET_KEY` | `change-me...` | **CHANGE IN PRODUCTION!** |
-| `MINIO_ROOT_USER` | `minioadmin` | MinIO access key |
-| `MINIO_ROOT_PASSWORD` | `minioadmin` | MinIO secret key |
-| `MAX_FILE_SIZE_MB` | `100` | Max file upload size |
-| `ALLOWED_MIME_TYPES` | `image/*,pdf...` | Allowed file types |
+---
 
-## 📡 API Endpoints
+## 📡 Основные API Эндпоинты
 
-### Authentication
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - Login and get tokens
-- `POST /api/auth/refresh` - Refresh access token
-- `POST /api/auth/logout` - Logout
-- `GET /api/auth/me` - Get current user
+Полный список доступен в Swagger (`/docs`), но вот ключевые:
 
-### Directories
-- `POST /api/directories` - Create directory
-- `GET /api/directories` - Get directory tree
-- `GET /api/directories/{id}` - Get directory
-- `DELETE /api/directories/{id}` - Delete directory
+- **Auth**: `/api/auth/login`, `/api/auth/register` (создает Pending user).
+- **Files**: `/api/files/upload-url` (S3 presigned), `/api/files/{id}/preview-url`.
+- **Directories**: `/api/directories` (CRUD папок).
+- **Users**: `/api/users` (Админка для управления ролями).
 
-### Files
-- `POST /api/files/upload-url` - Get presigned upload URL
-- `POST /api/files/{id}/confirm` - Confirm upload
-- `GET /api/files/{id}/download-url` - Get presigned download URL
-- `DELETE /api/files/{id}` - Delete file
-- `GET /api/files/directory/{id}` - List files in directory
+---
 
-### Permissions
-- `POST /api/directories/{id}/permissions` - Grant permissions
-- `DELETE /api/directories/{id}/permissions/{user_id}` - Revoke
-- `GET /api/directories/{id}/permissions` - List permissions
+## � Лицензия
 
-## 🔐 Permission System
-
-| Permission | Actions |
-|------------|---------|
-| `read` | View and download files |
-| `write` | Upload and modify files |
-| `delete` | Delete files |
-
-Permissions are inherited from parent directories. Explicitly set permissions override inheritance.
-
-## 📁 Project Structure
-
-```
-storageinator/
-├── app/
-│   ├── api/           # API endpoints
-│   ├── core/          # Config, security
-│   ├── db/            # MongoDB, S3 clients
-│   ├── models/        # Pydantic schemas
-│   ├── services/      # Business logic
-│   └── main.py        # FastAPI app
-├── frontend/
-│   ├── src/
-│   │   ├── api/       # Axios client
-│   │   ├── components/
-│   │   ├── router/
-│   │   ├── stores/    # Pinia stores
-│   │   └── views/
-│   ├── Dockerfile
-│   └── nginx.conf
-├── docker-compose.yml
-├── Dockerfile
-├── .env.example
-└── pyproject.toml
-```
-
-## 🧑‍💻 Development Setup
-
-For local development without Docker:
-
-```bash
-# Backend
-poetry install
-docker compose up -d mongodb minio
-poetry run uvicorn app.main:app --reload
-
-# Frontend (separate terminal)
-cd frontend
-npm install
-npm run dev
-```
-
-## 📄 License
-
-MIT
+MIT License. Делайте с этим кодом что хотите, только не ломайте прод в пятницу.
